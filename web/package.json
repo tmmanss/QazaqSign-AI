@@ -10,7 +10,8 @@
     "prebuild": "npm run assets",
     "build": "vite build",
     "preview": "vite preview --host",
-    "test:features": "node scripts/test-features.mjs"
+    "test:features": "node scripts/test-features.mjs",
+    "test:model": "node scripts/smoke-model.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.2.3",

@@ -56,6 +56,7 @@ Python и JS-версии сверяются автоматически: `npm ru
 - «Отладка» — топ-3 предсказания с вероятностями, FPS, ползунки порога и числа подтверждений.
 - PWA: `manifest.json`, иконки, service worker (офлайн-кэш), мета-теги iOS (`apple-mobile-web-app-capable`, standalone) — «На экран Домой» открывается как приложение.
 - Все модели и wasm отдаются с того же домена (без CDN).
+- Если onnxruntime-web не запускается (на телефонах бывает `RangeError: Out of memory` — не хватает памяти на второй wasm-модуль рядом с MediaPipe), модель выполняется запасным движком `web/src/tinyonnx.js`: он читает тот же `.onnx` и считает на чистом JS (~20–30 мс на прогон). Активный движок виден в режиме отладки.
 
 ## Запуск
 
@@ -71,6 +72,7 @@ cd web
 npm install
 npm run dev            # http://localhost:5173 (камера работает на localhost)
 npm run test:features  # сверка JS-признаков с Python
+npm run test:model     # onnxruntime-web и tinyonnx.js дают одинаковые вероятности
 npm run build          # -> web/dist
 ```
 

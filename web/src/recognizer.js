@@ -2,6 +2,7 @@
 import * as ort from 'onnxruntime-web/wasm';
 import wasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
 import { FEAT_DIM, SEQ_LEN, framesToFeatures } from './features.js';
+import { TinySession } from './tinyonnx.js';
 
 ort.env.wasm.wasmPaths = { wasm: wasmUrl };
 ort.env.wasm.numThreads = 1; // многопоточность требует COOP/COEP; модель крошечная, одного потока хватает
@@ -13,8 +14,9 @@ const MIN_SPAN_MS = 500;
 export const PAUSE_MS = 1000; // столько без рук = конец фразы
 
 export class Recognizer {
-  constructor(session, meta) {
-    this.session = session;
+  constructor(runModel, backend, meta) {
+    this.runModel = runModel; // async (Float32Array) -> number[]
+    this.backend = backend;
     this.labels = meta.labels;
     this.otherIdx = this.labels.findIndex((l) => l.is_other);
     this.threshold = 0.6;
@@ -25,11 +27,20 @@ export class Recognizer {
 
   static async load(base) {
     const meta = await (await fetch(`${base}model/labels.json`)).json();
-    const session = await ort.InferenceSession.create(`${base}model/sign_model.onnx`, {
-      executionProviders: ['wasm'],
-    });
     if (meta.seq_len !== SEQ_LEN || meta.feat_dim !== FEAT_DIM) throw new Error('labels.json не совпадает с features.js');
-    return new Recognizer(session, meta);
+    const url = `${base}model/sign_model.onnx`;
+    const dims = [1, SEQ_LEN, FEAT_DIM];
+    try {
+      const session = await ort.InferenceSession.create(url, { executionProviders: ['wasm'] });
+      const run = async (feats) => Array.from((await session.run({ input: new ort.Tensor('float32', feats, dims) })).probs.data);
+      return new Recognizer(run, 'onnxruntime-web', meta);
+    } catch (e) {
+      // на телефонах с малым лимитом памяти WebAssembly onnxruntime может не запуститься
+      console.warn('onnxruntime-web недоступен, использую JS-движок:', e);
+      const tiny = await TinySession.create(url);
+      const run = async (feats) => Array.from(tiny.run({ input: { data: feats, dims } }).probs.data);
+      return new Recognizer(run, 'js', meta);
+    }
   }
 
   reset() {
@@ -69,8 +80,7 @@ export class Recognizer {
     if (f.length < MIN_FRAMES || f[f.length - 1].t - f[0].t < MIN_SPAN_MS) return res;
 
     const feats = framesToFeatures(f.map((x) => x.hands), W, H);
-    const out = await this.session.run({ input: new ort.Tensor('float32', feats, [1, SEQ_LEN, FEAT_DIM]) });
-    const probs = Array.from(out.probs.data);
+    const probs = await this.runModel(feats);
     res.probs = probs;
     res.top3 = probs
       .map((p, i) => ({ i, p }))

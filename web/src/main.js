@@ -277,7 +277,7 @@ function renderDebug(r) {
   } else {
     $('top3').innerHTML = '<div class="muted">ожидание жеста…</div>';
   }
-  $('stats').textContent = `${state.fps.toFixed(0)} к/с · окно ${state.rec.frames.length} кадров · модель ${state.inferMs.toFixed(1)} мс · ${video.videoWidth}×${video.videoHeight}`;
+  $('stats').textContent = `${state.fps.toFixed(0)} к/с · окно ${state.rec.frames.length} кадров · модель ${state.inferMs.toFixed(1)} мс (${state.rec.backend}) · ${video.videoWidth}×${video.videoHeight}`;
 }
 
 function setDebug(on) {
@@ -317,9 +317,12 @@ async function start() {
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Камера недоступна: откройте сайт по HTTPS.');
     msg.textContent = 'Загрузка моделей…';
-    const [landmarker, rec] = await Promise.all([createLandmarker(), Recognizer.load(BASE), startCamera()]);
-    state.landmarker = landmarker;
-    state.rec = rec;
+    // по очереди, а не параллельно: два wasm-модуля сразу могут не влезть в память телефона
+    await startCamera();
+    state.landmarker ||= await createLandmarker();
+    msg.textContent = 'Загрузка модели жестов…';
+    state.rec = await Recognizer.load(BASE);
+    const rec = state.rec;
     bindSliders();
     renderDict(rec.labels);
     $('start').hidden = true;
