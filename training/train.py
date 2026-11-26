@@ -69,7 +69,11 @@ OTHER_LABEL = ("—", "—")
 
 N_SELECT_MIN, N_SELECT_MAX = 10, 12
 PRIORITY_MIN_F1 = 0.6  # слова из исходного списка берём в приоритете, если F1 не ниже
-FORCE = ["Привет!", "вода", "ждать"]  # важны для демо — включаются всегда
+FORCE = ["Привет!"]  # важно для демо — включается всегда
+# Порог на слово подбирается так, чтобы на «живых» окнах чужих жестов (неподвижные руки,
+# половинки жестов, паузы) это слово ложно срабатывало не чаще FP_TARGET.
+FP_TARGET = 0.005
+THR_MIN, THR_MAX = 0.5, 0.97
 CV_FOLDS = 5
 
 rng = np.random.default_rng(SEED)
@@ -133,6 +137,33 @@ def augment(raw, W, H):
     return seq_features(slots[resample_idx(len(slots))])
 
 
+def with_holds(raw):
+    """Неподвижные руки до/после жеста — как в живом окне камеры."""
+    T = len(raw)
+    a, b = rng.integers(0, int(T * 0.4) + 1, 2)
+    return np.concatenate([np.repeat(raw[:1], a, 0), raw, np.repeat(raw[-1:], b, 0)])
+
+
+def partial(raw):
+    """Кусок жеста (30–60%) — окно захватило начало, конец или середину."""
+    T = len(raw)
+    n = max(6, int(T * rng.uniform(0.3, 0.6)))
+    s = rng.integers(0, max(1, T - n + 1))
+    return raw[s:s + n]
+
+
+def other_variant(v):
+    """«Не слово» в разных видах, которые встречаются в окне камеры."""
+    r = rng.random()
+    if r < 0.4:
+        return v["raw"]
+    if r < 0.6:
+        return static_sample(v)
+    if r < 0.8:
+        return partial(v["raw"])
+    return with_holds(partial(v["raw"]))
+
+
 def static_sample(v):
     """Синтетический «покой»: один кадр, повторённый с дрожанием → класс _other."""
     raw = v["raw"]
@@ -182,7 +213,10 @@ def build_split(videos, words):
     o_tr = [v for v in videos if v["train"] and v["text"] in o_tr_words]
     o_te = [v for v in videos if not v["train"] and v["text"] in o_te_words]
     o_te = list(rng.choice(o_te, size=min(len(o_te), 150), replace=False))
-    return tr, te, o_tr, o_te
+    # третий непересекающийся набор слов — для подбора порогов
+    o_cal = [v for v in videos if v["text"] in set(perm[400:])]
+    o_cal = list(rng.choice(o_cal, size=min(len(o_cal), 800), replace=False))
+    return tr, te, o_tr, o_te, o_cal
 
 
 def train_model(words, tr, o_tr, epochs=70, log=""):
@@ -191,15 +225,17 @@ def train_model(words, tr, o_tr, epochs=70, log=""):
     model = SignCNN(len(classes))
     opt = torch.optim.AdamW(model.parameters(), lr=2e-3, weight_decay=1e-3)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-3, total_steps=epochs * 40)
-    n_other = max(60, len(tr) // len(words) * 3)  # _other ~ как 3 слова за эпоху
+    n_other = max(120, len(tr) // len(words) * 8)  # _other ~ как 4 слова за эпоху (по 2 копии)
     t0 = time.time()
     step = 0
     for ep in range(epochs):
-        items = [(v["raw"], v["W"], v["H"], ci[v["text"]]) for v in tr for _ in range(2)]
+        items = []
+        for v in tr:
+            for _ in range(2):
+                raw = with_holds(v["raw"]) if rng.random() < 0.5 else v["raw"]
+                items.append((raw, v["W"], v["H"], ci[v["text"]]))
         for v in rng.choice(o_tr, size=n_other, replace=False):
-            items.append((v["raw"], v["W"], v["H"], ci[OTHER]))
-        for v in rng.choice(o_tr, size=n_other // 3, replace=False):
-            items.append((static_sample(v), v["W"], v["H"], ci[OTHER]))
+            items.append((other_variant(v), v["W"], v["H"], ci[OTHER]))
         order = rng.permutation(len(items))
         X = np.stack([augment(*items[i][:3]) for i in order])
         Y = np.array([items[i][3] for i in order])
@@ -262,7 +298,7 @@ def print_cm(cm, classes, title):
 
 def cross_validate(videos, words, epochs=60):
     """Кросс-валидация по носителям внутри train: ~15 оценок на слово вместо 5."""
-    tr, _, o_tr, _ = build_split(videos, words)
+    tr, _, o_tr, _, _ = build_split(videos, words)
     users = np.array(sorted({v["user"] for v in tr + o_tr}))
     fold_of = {u: i % CV_FOLDS for i, u in enumerate(rng.permutation(users))}
     classes = list(words) + [OTHER]
@@ -309,7 +345,89 @@ def select_words(df):
     return chosen[:N_SELECT_MAX]
 
 
-def export(model, classes, df, df_cv=None):
+@torch.no_grad()
+def predict_raw(model, seqs):
+    """seqs: [(raw, W, H)] -> probs"""
+    model.eval()
+    X = np.stack([raw_to_features(r, W, H) for r, W, H in seqs])
+    return F.softmax(model(torch.from_numpy(X)), -1).numpy()
+
+
+def live_like(vids, k=5):
+    """Каждое видео чужого жеста -> k вариантов того, что реально попадает в окно камеры."""
+    out = []
+    for v in vids:
+        out.append((v["raw"], v["W"], v["H"]))
+        out.append((static_sample(v), v["W"], v["H"]))
+        for _ in range(k - 2):
+            out.append((with_holds(partial(v["raw"])) if rng.random() < 0.5 else partial(v["raw"]), v["W"], v["H"]))
+    return out
+
+
+def calibrate(model, classes, o_cal):
+    """Порог на каждое слово: наименьший, при котором ложные срабатывания на чужих жестах <= FP_TARGET."""
+    P = predict_raw(model, live_like(o_cal))
+    top, conf = P.argmax(1), P.max(1)
+    thr = {}
+    for i, c in enumerate(classes):
+        if c == OTHER:
+            continue
+        thr[c] = THR_MAX
+        for t in np.arange(THR_MIN, THR_MAX + 1e-9, 0.01):
+            if ((top == i) & (conf >= t)).mean() <= FP_TARGET:
+                thr[c] = round(float(t), 2)
+                break
+    return thr
+
+
+def live_eval(model, classes, thr, te, o_te):
+    """Оценка в условиях камеры: слова целиком и с паузами; чужие жесты в «живых» вариантах."""
+    t = np.array([thr.get(c, 1.0) for c in classes])
+    y = np.array([classes.index(v["text"]) for v in te])
+    rows = []
+    res = {}
+    for name, f in [("full", lambda r: r), ("holds", with_holds)]:
+        P = predict_raw(model, [(f(v["raw"]), v["W"], v["H"]) for v in te])
+        res[name] = (P.argmax(1) == y) & (P.max(1) >= t[P.argmax(1)])
+    Po = predict_raw(model, live_like(o_te))
+    top, conf = Po.argmax(1), Po.max(1)
+    fire = (top != classes.index(OTHER)) & (conf >= t[top])
+    for i, c in enumerate(classes):
+        if c == OTHER:
+            continue
+        m = y == i
+        rows.append(dict(word=c, threshold=thr[c], recall_full=res["full"][m].mean(), recall_holds=res["holds"][m].mean(),
+                         false_fires_per_1000=1000 * ((top == i) & fire).mean()))
+    df = pd.DataFrame(rows)
+    print("\n=== LIVE-LIKE EVAL (official test, per-word thresholds) ===")
+    print(f"words recognised: full {res['full'].mean():.2f}, with pauses {res['holds'].mean():.2f}")
+    print(f"unknown-gesture windows that fire a word: {fire.mean():.3f} (n={len(fire)})")
+    print(df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
+    return df
+
+
+def export_examples(model, classes, tr):
+    """По одному показательному примеру на слово (самый уверенный train-пример) — анимация в словаре."""
+    from features import assign_slots, to_pixels
+    P = predict_raw(model, [(v["raw"], v["W"], v["H"]) for v in tr])
+    out = {}
+    for i, c in enumerate(classes):
+        if c == OTHER:
+            continue
+        idx = [j for j, v in enumerate(tr) if v["text"] == c]
+        v = tr[max(idx, key=lambda j: P[j, i])]
+        slots = assign_slots(to_pixels(v["raw"], v["W"], v["H"]), v["W"])
+        frames = []
+        for fr in slots:
+            frames.append([None if np.isnan(h[0, 0]) else
+                           np.round(h[:, :2] / [v["W"], v["H"]], 3).tolist() for h in fr])
+        out[c] = dict(W=v["W"], H=v["H"], frames=frames)
+    p = OUT_MODEL / "examples.json"
+    p.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print("examples", p, f"({p.stat().st_size / 1024:.0f} KB)")
+
+
+def export(model, classes, df, df_cv=None, thr=None):
     OUT_MODEL.mkdir(parents=True, exist_ok=True)
     m = WithSoftmax(model).eval()
     dummy = torch.zeros(1, SEQ_LEN, FEAT_DIM)
@@ -321,7 +439,8 @@ def export(model, classes, df, df_cv=None):
     labels = [dict(id=c, ru=POOL[c][0] if c in POOL else OTHER_LABEL[0],
                    kk=POOL[c][1] if c in POOL else OTHER_LABEL[1],
                    is_other=c == OTHER, test_acc=round(float(acc.get(c, 0)), 3),
-                   cv_acc=round(float(cv[c]), 3) if c in cv else None) for c in classes]
+                   cv_acc=round(float(cv[c]), 3) if c in cv else None,
+                   threshold=(thr or {}).get(c)) for c in classes]
     meta = dict(seq_len=SEQ_LEN, feat_dim=FEAT_DIM, labels=labels)
     (OUT_MODEL / "labels.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     print("exported", path, f"({path.stat().st_size / 1024:.0f} KB)")
@@ -367,7 +486,7 @@ def main():
     REPORTS.mkdir(parents=True, exist_ok=True)
 
     # ---- фаза A: весь пул
-    tr, te, o_tr, o_te = build_split(videos, pool)
+    tr, te, o_tr, o_te, _ = build_split(videos, pool)
     print(f"phase A: train {len(tr)} + other {len(o_tr)}, test {len(te)} + other {len(o_te)}")
     model, classes = train_model(pool, tr, o_tr, log="A")
     dfA, cmA = evaluate(model, classes, te, o_te, train_users, "PHASE A — candidate pool")
@@ -384,14 +503,19 @@ def main():
     print(f"\nselected {len(chosen)} words: {chosen}")
 
     # ---- фаза B: финальная модель
-    tr, te, o_tr, o_te = build_split(videos, chosen)
+    tr, te, o_tr, o_te, o_cal = build_split(videos, chosen)
     model, classes = train_model(chosen, tr, o_tr, epochs=90, log="B")
     dfB, cmB = evaluate(model, classes, te, o_te, train_users, "PHASE B — final model")
     print_cm(cmB, classes, "phase B")
     dfB.to_csv(REPORTS / "final_per_word.csv", index=False)
     pd.DataFrame(cmB, index=classes, columns=classes).to_csv(REPORTS / "final_confusion.csv")
 
-    path = export(model, classes, dfB, dfCV)
+    thr = calibrate(model, classes, o_cal)
+    dfL = live_eval(model, classes, thr, te, o_te)
+    dfL.to_csv(REPORTS / "final_live_eval.csv", index=False)
+
+    path = export(model, classes, dfB, dfCV, thr)
+    export_examples(model, classes, tr)
     check_onnx(path, model, te)
     save_fixture(te)
     print(f"\ntotal time: {time.time() - t0:.0f}s")

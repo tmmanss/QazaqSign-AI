@@ -8,55 +8,8 @@
       "kk": "сәлем",
       "is_other": false,
       "test_acc": 0.8,
-      "cv_acc": 0.667
-    },
-    {
-      "id": "вода",
-      "ru": "вода",
-      "kk": "су",
-      "is_other": false,
-      "test_acc": 0.6,
-      "cv_acc": 0.467
-    },
-    {
-      "id": "ждать",
-      "ru": "ждать",
-      "kk": "күту",
-      "is_other": false,
-      "test_acc": 0.8,
-      "cv_acc": 0.0
-    },
-    {
-      "id": "Плохо",
-      "ru": "плохо",
-      "kk": "жаман",
-      "is_other": false,
-      "test_acc": 1.0,
-      "cv_acc": 0.933
-    },
-    {
-      "id": "Добро пожаловать!",
-      "ru": "добро пожаловать",
-      "kk": "қош келдіңіз",
-      "is_other": false,
-      "test_acc": 0.8,
-      "cv_acc": 0.8
-    },
-    {
-      "id": "сегодня",
-      "ru": "сегодня",
-      "kk": "бүгін",
-      "is_other": false,
-      "test_acc": 1.0,
-      "cv_acc": 0.867
-    },
-    {
-      "id": "благодарность",
-      "ru": "благодарность",
-      "kk": "алғыс",
-      "is_other": false,
-      "test_acc": 0.6,
-      "cv_acc": 0.667
+      "cv_acc": 0.4,
+      "threshold": 0.75
     },
     {
       "id": "кто?",
@@ -64,7 +17,26 @@
       "kk": "кім?",
       "is_other": false,
       "test_acc": 0.6,
-      "cv_acc": 0.867
+      "cv_acc": 0.733,
+      "threshold": 0.62
+    },
+    {
+      "id": "сегодня",
+      "ru": "сегодня",
+      "kk": "бүгін",
+      "is_other": false,
+      "test_acc": 0.6,
+      "cv_acc": 0.733,
+      "threshold": 0.5
+    },
+    {
+      "id": "Добро пожаловать!",
+      "ru": "добро пожаловать",
+      "kk": "қош келдіңіз",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.533,
+      "threshold": 0.5
     },
     {
       "id": "имя",
@@ -72,15 +44,8 @@
       "kk": "есім",
       "is_other": false,
       "test_acc": 1.0,
-      "cv_acc": 0.8
-    },
-    {
-      "id": "бумага",
-      "ru": "бумага",
-      "kk": "қағаз",
-      "is_other": false,
-      "test_acc": 0.4,
-      "cv_acc": 0.733
+      "cv_acc": 0.733,
+      "threshold": 0.68
     },
     {
       "id": "помочь",
@@ -88,7 +53,44 @@
       "kk": "көмектесу",
       "is_other": false,
       "test_acc": 0.8,
-      "cv_acc": 0.8
+      "cv_acc": 0.667,
+      "threshold": 0.75
+    },
+    {
+      "id": "сколько",
+      "ru": "сколько",
+      "kk": "қанша",
+      "is_other": false,
+      "test_acc": 1.0,
+      "cv_acc": 0.667,
+      "threshold": 0.66
+    },
+    {
+      "id": "болит",
+      "ru": "болит",
+      "kk": "ауырады",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.8,
+      "threshold": 0.55
+    },
+    {
+      "id": "благодарность",
+      "ru": "благодарность",
+      "kk": "алғыс",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.4,
+      "threshold": 0.5
+    },
+    {
+      "id": "Пока",
+      "ru": "пока",
+      "kk": "сау бол",
+      "is_other": false,
+      "test_acc": 0.4,
+      "cv_acc": 0.867,
+      "threshold": 0.53
     },
     {
       "id": "еще нет",
@@ -96,15 +98,26 @@
       "kk": "әлі жоқ",
       "is_other": false,
       "test_acc": 0.8,
-      "cv_acc": 0.933
+      "cv_acc": 0.733,
+      "threshold": 0.83
+    },
+    {
+      "id": "хорошо",
+      "ru": "хорошо",
+      "kk": "жақсы",
+      "is_other": false,
+      "test_acc": 0.2,
+      "cv_acc": 0.357,
+      "threshold": 0.5
     },
     {
       "id": "_other",
       "ru": "—",
       "kk": "—",
       "is_other": true,
-      "test_acc": 0.72,
-      "cv_acc": 0.47
+      "test_acc": 0.867,
+      "cv_acc": 0.63,
+      "threshold": null
     }
   ]
 }

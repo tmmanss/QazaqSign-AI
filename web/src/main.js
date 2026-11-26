@@ -1,4 +1,5 @@
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import { HAND_CONNECTIONS, playDemo } from './demo.js';
 import { INFER_EVERY_MS, Recognizer } from './recognizer.js';
 import './style.css';
 
@@ -8,10 +9,6 @@ const video = $('video');
 const canvas = $('overlay');
 const ctx = canvas.getContext('2d');
 
-const HAND_CONNECTIONS = [
-  [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],
-  [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20],
-];
 
 const state = {
   landmarker: null,
@@ -249,6 +246,10 @@ function quality(l) {
   return ['bad', 'слабо'];
 }
 
+let examples = {};
+let demo = null;
+let demoMirror = store.get('demoMirror', false);
+
 function renderDict(labels) {
   const items = labels
     .filter((l) => !l.is_other)
@@ -256,13 +257,52 @@ function renderDict(labels) {
     .sort((x, y) => y.a - x.a);
   $('dict-list').innerHTML = items
     .map(
-      ({ l, q, a }) => `<li>
-        <div><div class="w-ru">${l.ru}</div><div class="w-kk">${l.kk}</div></div>
-        <span class="badge ${q[0]}" title="точность ${Math.round(a * 100)}%">${q[1]} · ${Math.round(a * 100)}%</span>
+      ({ l, q, a }) => `<li data-id="${l.id}">
+        <button class="word-row">
+          <span class="play" aria-hidden="true">▶</span>
+          <div class="word-names"><div class="w-ru">${l.ru}</div><div class="w-kk">${l.kk}</div></div>
+          <span class="badge ${q[0]}" title="точность ${Math.round(a * 100)}%">${q[1]} · ${Math.round(a * 100)}%</span>
+        </button>
       </li>`,
     )
     .join('');
 }
+
+function closeDemo() {
+  demo?.stop();
+  demo = null;
+  document.querySelectorAll('#dict-list .demo').forEach((el) => el.remove());
+  document.querySelectorAll('#dict-list li.open').forEach((el) => el.classList.remove('open'));
+}
+
+function openDemo(li) {
+  const wasOpen = li.classList.contains('open');
+  closeDemo();
+  if (wasOpen) return;
+  const ex = examples[li.dataset.id];
+  if (!ex) return;
+  li.classList.add('open');
+  const box = document.createElement('div');
+  box.className = 'demo';
+  box.innerHTML = `<canvas></canvas>
+    <div class="demo-bar">
+      <span>Так показывал носитель из датасета Slovo</span>
+      <button class="btn ghost small mirror-btn">${demoMirror ? 'Как в оригинале' : 'Отзеркалить'}</button>
+    </div>`;
+  li.append(box);
+  demo = playDemo(box.querySelector('canvas'), ex, demoMirror);
+  box.querySelector('.mirror-btn').onclick = (e) => {
+    demoMirror = !demoMirror;
+    store.set('demoMirror', demoMirror);
+    demo.setMirror(demoMirror);
+    e.target.textContent = demoMirror ? 'Как в оригинале' : 'Отзеркалить';
+  };
+}
+
+$('dict-list').addEventListener('click', (e) => {
+  const row = e.target.closest('.word-row');
+  if (row) openDemo(row.parentElement);
+});
 
 function renderDebug(r) {
   const labels = state.rec.labels;
@@ -270,8 +310,10 @@ function renderDebug(r) {
     $('top3').innerHTML = r.top3
       .map(({ i, p }) => {
         const name = labels[i].is_other ? 'нет слова' : labels[i].ru;
-        const pass = !labels[i].is_other && p >= state.rec.threshold;
-        return `<div class="bar ${pass ? 'pass' : ''}"><span>${name}</span><b>${(p * 100).toFixed(0)}%</b><i style="width:${p * 100}%"></i></div>`;
+        const need = labels[i].is_other ? null : state.rec.thresholdFor(i);
+        const pass = need !== null && p >= need;
+        const hint = need !== null ? ` <small>/ ${(need * 100).toFixed(0)}</small>` : '';
+        return `<div class="bar ${pass ? 'pass' : ''}"><span>${name}</span><b>${(p * 100).toFixed(0)}%${hint}</b><i style="width:${p * 100}%"></i></div>`;
       })
       .join('');
   } else {
@@ -290,20 +332,20 @@ function setDebug(on) {
 function bindSliders() {
   const thr = $('thr');
   const st = $('streak');
-  thr.value = state.rec.threshold = store.get('threshold', 0.6);
-  st.value = state.rec.needStreak = store.get('needStreak', 3);
+  thr.value = state.rec.threshold = store.get('minThreshold', 0.5);
+  st.value = state.rec.needStreak = store.get('confirmCount', 2);
   const show = () => {
     $('thr-val').textContent = Number(thr.value).toFixed(2);
     $('streak-val').textContent = st.value;
   };
   thr.oninput = () => {
     state.rec.threshold = Number(thr.value);
-    store.set('threshold', state.rec.threshold);
+    store.set('minThreshold', state.rec.threshold);
     show();
   };
   st.oninput = () => {
     state.rec.needStreak = Number(st.value);
-    store.set('needStreak', state.rec.needStreak);
+    store.set('confirmCount', state.rec.needStreak);
     show();
   };
   show();
@@ -358,9 +400,17 @@ fetch(`${BASE}model/labels.json`)
   .then((r) => r.json())
   .then((m) => renderDict(m.labels))
   .catch(console.warn);
-$('btn-dict-close').onclick = () => ($('dict').hidden = true);
+fetch(`${BASE}model/examples.json`)
+  .then((r) => (r.ok ? r.json() : {}))
+  .then((ex) => (examples = ex))
+  .catch(console.warn);
+const closeDict = () => {
+  closeDemo();
+  $('dict').hidden = true;
+};
+$('btn-dict-close').onclick = closeDict;
 $('dict').onclick = (e) => {
-  if (e.target.id === 'dict') $('dict').hidden = true;
+  if (e.target.id === 'dict') closeDict();
 };
 $('btn-debug').onclick = () => setDebug(!state.debug);
 

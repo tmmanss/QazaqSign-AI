@@ -42,7 +42,7 @@
 
       <section id="debug" class="debug" hidden>
         <div id="top3"></div>
-        <label class="row">Порог <input id="thr" type="range" min="0.3" max="0.95" step="0.05" /> <b id="thr-val"></b></label>
+        <label class="row">Мин. порог <input id="thr" type="range" min="0.3" max="0.95" step="0.05" /> <b id="thr-val"></b></label>
         <label class="row">Подряд <input id="streak" type="range" min="1" max="6" step="1" /> <b id="streak-val"></b></label>
         <div id="stats" class="stats"></div>
       </section>
@@ -66,8 +66,9 @@
             </button>
           </div>
           <p class="hint">
-            Модель знает только эти жесты русского жестового языка (датасет Slovo). Держите руки в кадре, показывайте
-            жест целиком. Чтобы закончить фразу, опустите руки на секунду.
+            Модель знает только эти жесты русского жестового языка (датасет Slovo). Нажмите на слово, чтобы увидеть,
+            как его показывать. Держите руки в кадре, показывайте жест целиком. Чтобы закончить фразу, опустите руки
+            на секунду.
           </p>
           <ul id="dict-list"></ul>
           <p class="hint small" id="voice-info"></p>

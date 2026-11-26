@@ -402,3 +402,69 @@ button {
 .start-msg {
   min-height: 1.4em;
 }
+
+/* ---------- анимация жеста в словаре */
+#dict-list li {
+  display: block;
+  padding: 0;
+}
+.word-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  background: none;
+  border: 0;
+  text-align: left;
+}
+.word-names {
+  flex: 1;
+  min-width: 0;
+}
+.play {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(45, 212, 191, 0.15);
+  color: var(--accent);
+  font-size: 12px;
+}
+li.open .play {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.demo {
+  padding-bottom: 14px;
+}
+.demo canvas {
+  display: block;
+  width: 100%;
+  height: min(52vh, 340px);
+  border-radius: 14px;
+  background: #0b1416;
+  border: 1px solid var(--line);
+}
+.demo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.btn.small {
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+.bar small {
+  color: var(--muted);
+  font-weight: 400;
+}

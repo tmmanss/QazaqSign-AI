@@ -19,8 +19,10 @@ export class Recognizer {
     this.backend = backend;
     this.labels = meta.labels;
     this.otherIdx = this.labels.findIndex((l) => l.is_other);
-    this.threshold = 0.6;
-    this.needStreak = 3;
+    // минимальный общий порог (ползунок в отладке); у каждого слова ещё свой порог из labels.json,
+    // подобранный так, чтобы слово редко срабатывало на чужих жестах — действует больший из двух
+    this.threshold = 0.5;
+    this.needStreak = 2; // пороги откалиброваны на каждое слово, двух подтверждений подряд достаточно
     this.frames = []; // { t, hands: [hand|null, hand|null] }
     this.reset();
   }
@@ -41,6 +43,10 @@ export class Recognizer {
       const run = async (feats) => Array.from(tiny.run({ input: { data: feats, dims } }).probs.data);
       return new Recognizer(run, 'js', meta);
     }
+  }
+
+  thresholdFor(i) {
+    return Math.max(this.threshold, this.labels[i].threshold ?? 0);
   }
 
   reset() {
@@ -88,7 +94,7 @@ export class Recognizer {
       .slice(0, 3);
 
     const best = res.top3[0];
-    if (best.i !== this.otherIdx && best.p >= this.threshold) {
+    if (best.i !== this.otherIdx && best.p >= this.thresholdFor(best.i)) {
       this.streak = best.i === this.streakIdx ? this.streak + 1 : 1;
       this.streakIdx = best.i;
     } else {
