@@ -15,6 +15,11 @@
   color-scheme: dark;
 }
 
+/* атрибут hidden должен скрывать элемент даже при display: flex у класса */
+[hidden] {
+  display: none !important;
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
