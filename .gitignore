@@ -1,0 +1,9 @@
+data/
+__pycache__/
+*.pyc
+*.log
+node_modules/
+web/dist/
+.vercel/
+# генерируется web/scripts/copy-assets.mjs при npm run dev/build
+web/public/mediapipe/

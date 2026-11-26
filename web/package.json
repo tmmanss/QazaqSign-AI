@@ -1,0 +1,22 @@
+{
+  "name": "qazaqsign-ai",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/copy-assets.mjs",
+    "predev": "npm run assets",
+    "dev": "vite --host",
+    "prebuild": "npm run assets",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test:features": "node scripts/test-features.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "1.2.3",
+    "onnxruntime-web": "1.31.1"
+  },
+  "devDependencies": {
+    "vite": "8.3.8"
+  }
+}

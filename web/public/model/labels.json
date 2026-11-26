@@ -1,0 +1,110 @@
+{
+  "seq_len": 32,
+  "feat_dim": 132,
+  "labels": [
+    {
+      "id": "Привет!",
+      "ru": "привет",
+      "kk": "сәлем",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.667
+    },
+    {
+      "id": "вода",
+      "ru": "вода",
+      "kk": "су",
+      "is_other": false,
+      "test_acc": 0.6,
+      "cv_acc": 0.467
+    },
+    {
+      "id": "ждать",
+      "ru": "ждать",
+      "kk": "күту",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.0
+    },
+    {
+      "id": "Плохо",
+      "ru": "плохо",
+      "kk": "жаман",
+      "is_other": false,
+      "test_acc": 1.0,
+      "cv_acc": 0.933
+    },
+    {
+      "id": "Добро пожаловать!",
+      "ru": "добро пожаловать",
+      "kk": "қош келдіңіз",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.8
+    },
+    {
+      "id": "сегодня",
+      "ru": "сегодня",
+      "kk": "бүгін",
+      "is_other": false,
+      "test_acc": 1.0,
+      "cv_acc": 0.867
+    },
+    {
+      "id": "благодарность",
+      "ru": "благодарность",
+      "kk": "алғыс",
+      "is_other": false,
+      "test_acc": 0.6,
+      "cv_acc": 0.667
+    },
+    {
+      "id": "кто?",
+      "ru": "кто?",
+      "kk": "кім?",
+      "is_other": false,
+      "test_acc": 0.6,
+      "cv_acc": 0.867
+    },
+    {
+      "id": "имя",
+      "ru": "имя",
+      "kk": "есім",
+      "is_other": false,
+      "test_acc": 1.0,
+      "cv_acc": 0.8
+    },
+    {
+      "id": "бумага",
+      "ru": "бумага",
+      "kk": "қағаз",
+      "is_other": false,
+      "test_acc": 0.4,
+      "cv_acc": 0.733
+    },
+    {
+      "id": "помочь",
+      "ru": "помочь",
+      "kk": "көмектесу",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.8
+    },
+    {
+      "id": "еще нет",
+      "ru": "ещё нет",
+      "kk": "әлі жоқ",
+      "is_other": false,
+      "test_acc": 0.8,
+      "cv_acc": 0.933
+    },
+    {
+      "id": "_other",
+      "ru": "—",
+      "kk": "—",
+      "is_other": true,
+      "test_acc": 0.72,
+      "cv_acc": 0.47
+    }
+  ]
+}

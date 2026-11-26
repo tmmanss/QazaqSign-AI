@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>QazaqSign AI</title>
+    <meta name="description" content="Переводчик жестового языка через камеру: распознавание прямо в браузере, без сервера." />
+    <meta name="theme-color" content="#0b1416" />
+
+    <!-- PWA / iOS: «На экран Домой» открывается как приложение без интерфейса Safari -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="QazaqSign" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/icons/favicon.png" />
+  </head>
+  <body>
+    <main id="app">
+      <div id="stage">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="overlay"></canvas>
+      </div>
+
+      <header class="topbar">
+        <div class="brand">QazaqSign <span>AI</span></div>
+        <div class="actions">
+          <button class="icon-btn" id="btn-debug" aria-label="Режим отладки" title="Отладка">
+            <svg viewBox="0 0 24 24"><path d="M4 19h16M7 15V9M12 15V5M17 15v-3" /></svg>
+          </button>
+          <button class="icon-btn" id="btn-dict" aria-label="Словарь" title="Словарь">
+            <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5zM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" /></svg>
+          </button>
+          <button class="icon-btn" id="btn-flip" aria-label="Переключить камеру" title="Камера">
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4zM9 13a3 3 0 0 1 5.2-2M15 13a3 3 0 0 1-5.2 2M14.5 8.8v2.4h-2.4M9.5 17.2v-2.4h2.4" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="status" class="status"><span class="dot"></span><span id="status-text">Нет рук в кадре</span></div>
+
+      <section id="debug" class="debug" hidden>
+        <div id="top3"></div>
+        <label class="row">Порог <input id="thr" type="range" min="0.3" max="0.95" step="0.05" /> <b id="thr-val"></b></label>
+        <label class="row">Подряд <input id="streak" type="range" min="1" max="6" step="1" /> <b id="streak-val"></b></label>
+        <div id="stats" class="stats"></div>
+      </section>
+
+      <section class="subs">
+        <div class="streak"><div id="streak-bar"></div></div>
+        <p id="sub-ru" class="ru placeholder">Покажите жест — перевод появится здесь</p>
+        <p id="sub-kk" class="kk"></p>
+        <div class="sub-actions">
+          <button id="btn-clear" class="btn ghost">Очистить</button>
+          <button id="btn-speak" class="btn primary">Озвучить</button>
+        </div>
+      </section>
+
+      <section id="dict" class="sheet" hidden>
+        <div class="sheet-card">
+          <div class="sheet-head">
+            <h2>Словарь</h2>
+            <button class="icon-btn" id="btn-dict-close" aria-label="Закрыть">
+              <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
+          <p class="hint">
+            Модель знает только эти жесты русского жестового языка (датасет Slovo). Держите руки в кадре, показывайте
+            жест целиком. Чтобы закончить фразу, опустите руки на секунду.
+          </p>
+          <ul id="dict-list"></ul>
+          <p class="hint small" id="voice-info"></p>
+        </div>
+      </section>
+
+      <section id="start" class="start">
+        <img src="/icons/icon-192.png" alt="" width="96" height="96" />
+        <h1>QazaqSign AI</h1>
+        <p>Перевод жестового языка с камеры на русский и казахский. Всё работает на устройстве — видео никуда не отправляется.</p>
+        <button id="btn-start" class="btn primary big">Включить камеру</button>
+        <button id="btn-start-dict" class="btn ghost">Словарь жестов</button>
+        <p id="start-msg" class="start-msg"></p>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
