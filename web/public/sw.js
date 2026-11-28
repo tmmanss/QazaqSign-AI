@@ -1,6 +1,6 @@
 // Service worker: офлайн-кэш. Тяжёлые неизменные файлы (MediaPipe, wasm, сборка) — cache-first,
 // страница и /model/ — network-first, чтобы обновления сайта и переобученная модель приходили сразу.
-const CACHE = 'qazaqsign-v2';
+const CACHE = 'audarmashy-v1';
 const HEAVY = /\/(mediapipe|assets|icons)\//;
 
 self.addEventListener('install', () => self.skipWaiting());

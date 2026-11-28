@@ -1,6 +1,6 @@
 {
-  "name": "QazaqSign AI — переводчик жестового языка",
-  "short_name": "QazaqSign",
+  "name": "AudarmashyAI — переводчик жестового языка",
+  "short_name": "AudarmashyAI",
   "description": "Перевод жестового языка с камеры на русский и казахский прямо в браузере.",
   "lang": "ru",
   "start_url": "/",
